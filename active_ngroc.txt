@@ -1,3 +1,0 @@
-# a la carpeta on esta: start_shiny_ngrok.sh
-# obrir shell: 
-./start_shiny_ngrok.sh
