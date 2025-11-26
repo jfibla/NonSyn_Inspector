@@ -1,4 +1,0 @@
-/opt/homebrew/bin/bcftools
-/Volumes/LaCie_Drive/ANNOTATE_RS_CODES_Resources/resources_broad_hg38_v0_Homo_sapiens_assembly38.dbsnp138.vcf.gz
-/Volumes/LaCie_Drive/dbNSFP5.0a
-search_dbNSFP50a
