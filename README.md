@@ -114,6 +114,49 @@ Load a TSV/CSV containing at least:
 - **CHR**, **BP**, **P**
 - Optional: **SNP**, alleles, gene name, etc.
 
+      HTML('
+<p style="text-align: justify;">
+  Input file format [(*) needed columns]
+</p>
+
+<table style="border-collapse: collapse; width: 100%;" border="1">
+  <thead>
+    <tr>
+      <th>CHR(*)</th>
+      <th>SNP(*)</th>
+      <th>BP(*)</th>
+      <th>A1</th>
+      <th>TEST</th>
+      <th>NMISS</th>
+      <th>OR</th>
+      <th>STAT</th>
+      <th>P(*)</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr><td>14</td><td>14:33967212:C:A</td><td>33967212</td><td>C</td><td>ADD</td><td>720</td><td>2.03</td><td>4.84</td><td>1.30E-06</td></tr>
+    <tr><td>18</td><td>rs12955421</td><td>76002716</td><td>A</td><td>ADD</td><td>720</td><td>2.393</td><td>4.76</td><td>1.93E-06</td></tr>
+    <tr><td>3</td><td>rs1145036</td><td>2328334</td><td>G</td><td>ADD</td><td>720</td><td>1.816</td><td>4.62</td><td>3.83E-06</td></tr>
+
+    <tr><td>2</td><td>rs59874571</td><td>29998814</td><td>A</td><td>ADD</td><td>720</td><td>0.4769</td><td>-4.558</td><td>5.17E-06</td></tr>
+
+    <tr><td>3</td><td>3:2328258:T:C</td><td>2328258</td><td>C</td><td>ADD</td><td>720</td><td>1.804</td><td>4.534</td><td>5.78E-06</td></tr>
+    <tr><td>3</td><td>rs4263314</td><td>75290033</td><td>A</td><td>ADD</td><td>720</td><td>2.255</td><td>4.52</td><td>6.20E-06</td></tr>
+
+    <tr><td>18</td><td>18:75996882:G:T</td><td>75996882</td><td>T</td><td>ADD</td><td>720</td><td>2.208</td><td>4.509</td><td>6.50E-06</td></tr>
+    <tr><td>18</td><td>rs12969521</td><td>75996460</td><td>A</td><td>ADD</td><td>720</td><td>2.208</td><td>4.509</td><td>6.50E-06</td></tr>
+    <tr><td>18</td><td>rs71361173</td><td>76000450</td><td>G</td><td>ADD</td><td>720</td><td>2.208</td><td>4.509</td><td>6.50E-06</td></tr>
+    <tr><td>18</td><td>rs7229435</td><td>75996609</td><td>C</td><td>ADD</td><td>720</td><td>2.208</td><td>4.509</td><td>6.50E-06</td></tr>
+    <tr><td>18</td><td>rs7243650</td><td>75996566</td><td>T</td><td>ADD</td><td>720</td><td>2.208</td><td>4.509</td><td>6.50E-06</td></tr>
+    <tr><td>18</td><td>rs7244629</td><td>75997161</td><td>T</td><td>ADD</td><td>720</td><td>2.208</td><td>4.509</td><td>6.50E-06</td></tr>
+
+    <tr><td>5</td><td>5:134520666:CT:C</td><td>134520666</td><td>C</td><td>ADD</td><td>720</td><td>0.5442</td><td>-4.499</td><td>6.81E-06</td></tr>
+    <tr><td>10</td><td>rs4948491</td><td>61937130</td><td>G</td><td>ADD</td><td>720</td><td>0.5648</td><td>-4.492</td><td>7.05E-06</td></tr>
+    <tr><td>3</td><td>rs1143978</td><td>2317302</td><td>C</td><td>ADD</td><td>720</td><td>1.775</td><td>4.464</td><td>8.05E-06</td></tr>
+  </tbody>
+</table>
+
 Generates:
 - Manhattan plot  
 - Table of significant SNPs  
