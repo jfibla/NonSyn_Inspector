@@ -67,12 +67,8 @@ Massive functional annotation dataset for non-synonymous variants.
 
 ### Download
 **Official site:**  
-https://dbnsfp.houstonbioinformatics.org
+[https://dbnsfp.houstonbioinformatics.org](https://www.dbnsfp.org)
 
-**Direct FTP (full dataset):**
-```
-ftp://dbnsfp:dbnsfp@dbnsfp.houstonbioinformatics.org/dbNSFP5.0a.zip
-```
 
 You must extract and include in a single folder:
 ```
