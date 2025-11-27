@@ -67,8 +67,10 @@ Massive functional annotation dataset for non-synonymous variants.
 
 ### Download
 **Official site:**  
+dbNSFP is free for academic and non-commercial use under the CC BY-NC-ND 4.0 license.
+Register with dbNSFP using your academic institutional email to receive the dbNSFP Access Code
+Then use the Access Code to request a download for the current or past versions of dbNSFP. The download links will be sent to your registered email automatically.
 [https://dbnsfp.houstonbioinformatics.org](https://www.dbnsfp.org)
-
 
 You must extract and include in a single folder:
 ```
