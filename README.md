@@ -114,26 +114,6 @@ Load a TSV/CSV containing at least:
 - **CHR**, **BP**, **P**
 - Optional: **SNP**, alleles, gene name, etc.
 
-      HTML('
-<p style="text-align: justify;">
-  Input file format [(*) needed columns]
-</p>
-
-<table style="border-collapse: collapse; width: 100%;" border="1">
-  <thead>
-    <tr>
-      <th>CHR(*)</th>
-      <th>SNP(*)</th>
-      <th>BP(*)</th>
-      <th>A1</th>
-      <th>TEST</th>
-      <th>NMISS</th>
-      <th>OR</th>
-      <th>STAT</th>
-      <th>P(*)</th>
-    </tr>
-  </thead>
-
   <tbody>
     <tr><td>14</td><td>14:33967212:C:A</td><td>33967212</td><td>C</td><td>ADD</td><td>720</td><td>2.03</td><td>4.84</td><td>1.30E-06</td></tr>
     <tr><td>18</td><td>rs12955421</td><td>76002716</td><td>A</td><td>ADD</td><td>720</td><td>2.393</td><td>4.76</td><td>1.93E-06</td></tr>
