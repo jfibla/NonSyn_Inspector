@@ -111,15 +111,15 @@ This file is fully compatible with:
 
 ## **Step 1 — Import GWAS Table**
 Load a TSV/CSV containing at least:
-- **CHR**, **BP**, **P**
+- Mandatory: **CHR**, **BP**, **P**
 - Optional: **SNP**, alleles, gene name, etc.
 
 Example input table
 <table>
 <thead>
 <tr>
-  <th>CHR</th><th>SNP</th><th>BP</th><th>A1</th><th>TEST</th>
-  <th>NMISS</th><th>OR</th><th>STAT</th><th>P</th>
+  <th>CHR*</th><th>SNP</th><th>BP*</th><th>A1</th><th>TEST</th>
+  <th>NMISS</th><th>OR</th><th>STAT</th><th>P*</th>
 </tr>
 </thead>
 <tbody>
