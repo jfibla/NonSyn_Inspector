@@ -147,11 +147,15 @@ Example input table
 
 Generates:
 - Manhattan plot  
-- Table of significant SNPs  
-- Auto-generated genomic intervals  
-
 ---
-
+## **Filter by P-value theshold**
+Generates:
+- Table of significant SNPs  
+---  
+## **Extract genomic intervals**
+Generates:
+- Auto-generated genomic intervals
+---  
 ## **Step 2 — Extract Variants with bcftools**
 Uses dbSNP VCF to extract:
 - Only variants in selected genomic intervals  
