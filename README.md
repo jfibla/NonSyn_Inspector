@@ -114,7 +114,7 @@ Load a TSV/CSV containing at least:
 - Mandatory: **CHR**, **BP**, **P**
 - Optional: **SNP**, alleles, gene name, etc.
 
-Example input table
+Example input table (ex. plink output file from GWAS association test)
 <table>
 <thead>
 <tr>
@@ -137,11 +137,7 @@ Example input table
 <tr><td>18</td><td>rs71361173</td><td>76000450</td><td>G</td><td>ADD</td><td>720</td><td>2.208</td><td>4.509</td><td>6.50E-06</td></tr>
 <tr><td>18</td><td>rs7229435</td><td>75996609</td><td>C</td><td>ADD</td><td>720</td><td>2.208</td><td>4.509</td><td>6.50E-06</td></tr>
 <tr><td>18</td><td>rs7243650</td><td>75996566</td><td>T</td><td>ADD</td><td>720</td><td>2.208</td><td>4.509</td><td>6.50E-06</td></tr>
-<tr><td>18</td><td>rs7244629</td><td>75997161</td><td>T</td><td>ADD</td><td>720</td><td>2.208</td><td>4.509</td><td>6.50E-06</td></tr>
 
-<tr><td>5</td><td>5:134520666:CT:C</td><td>134520666</td><td>C</td><td>ADD</td><td>720</td><td>0.5442</td><td>-4.499</td><td>6.81E-06</td></tr>
-<tr><td>10</td><td>rs4948491</td><td>61937130</td><td>G</td><td>ADD</td><td>720</td><td>0.5648</td><td>-4.492</td><td>7.05E-06</td></tr>
-<tr><td>3</td><td>rs1143978</td><td>2317302</td><td>C</td><td>ADD</td><td>720</td><td>1.775</td><td>4.464</td><td>8.05E-06</td></tr>
 </tbody>
 </table>
 
