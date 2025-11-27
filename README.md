@@ -111,7 +111,7 @@ This file is fully compatible with:
 
 ## **Step 1 — Import GWAS Table**
 Load a TSV/CSV containing at least:
-- Mandatory: **CHR**, **BP**, **P**
+- Mandatory (*): **CHR**, **BP**, **P**
 - Optional: **SNP**, alleles, gene name, etc.
 
 Example input table (ex. plink output file from GWAS association test)
