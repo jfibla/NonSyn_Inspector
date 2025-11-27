@@ -88,15 +88,15 @@ Used in *Step 2* for extracting variants located in selected intervals.
 
 ### Required file:
 ```
-resources_broad_hg38_v0_Homo_sapiens_assembly38.dbsnp138.vcf.gz
+resources_broad_hg38_v0_Homo_sapiens_assembly38.dbsnp138.vcf
 ```
 
 ### Download
 Google Cloud (Broad Institute):
 
 ```
-https://storage.googleapis.com/genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.gz
-https://storage.googleapis.com/genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.gz.tbi
+https://console.cloud.google.com/storage/browser/_details/genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf
+https://console.cloud.google.com/storage/browser/_details/genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.idx
 ```
 
 This file is fully compatible with:
