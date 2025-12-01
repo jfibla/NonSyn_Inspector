@@ -186,6 +186,12 @@ Cleans numeric fields, fixes separators, tags gene symbols, and standardizes chr
 
 # Visualization Modules
 
+## **Manhattan & UCSC links**
+- Multi-metric Manhattan plot  
+- Supports all Score/Rankscore fields  
+- Click → UCSC Genome Browser (centered + highlighted base)  
+- Selectable UCSC mirror  
+
 ## **Heatmap View**
 - Score / Rankscore toggle  
 - Column scaling (0–1)  
@@ -199,12 +205,6 @@ Cleans numeric fields, fixes separators, tags gene symbols, and standardizes chr
 - dbSNP links  
 - ClinVar and OMIM fields  
 - UCSC region link per SNP  
-
-## **Manhattan & Genes**
-- Multi-metric Manhattan plot  
-- Supports all Score/Rankscore fields  
-- Click → UCSC Genome Browser (centered + highlighted base)  
-- Selectable UCSC mirror  
 
 ## **GO Enrichment**
 - Biological Process, Cellular Component, Molecular Function  
