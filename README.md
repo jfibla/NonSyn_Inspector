@@ -35,7 +35,7 @@ Main dependencies:
 - dplyr, tidyr, readr  
 - ggplot2, ggplotify, pheatmap  
 - clusterProfiler, org.Hs.eg.db, GO.db  
-- processx, conflicted, stringr  
+- processx, conflicted, stringr, patchwork 
 
 ---
 
