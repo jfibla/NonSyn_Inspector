@@ -1,4 +1,4 @@
-# app.R
+# app.R ~/Library/CloudStorage/Dropbox/NonSyn_Inspector/app.R
 options(shiny.maxRequestSize = 1024*1024^2)  # adjust if needed
 
 library(shiny)
@@ -18,6 +18,7 @@ library(org.Hs.eg.db)
 library(GO.db)
 library(stringr)
 library(forcats)
+library(patchwork)
 
 
 conflicted::conflicts_prefer(
@@ -28,7 +29,8 @@ conflicted::conflicts_prefer(
   dplyr::mutate,
   IRanges::union,
   dplyr::union,
-  base::union
+  base::union,
+  IRanges::desc
 )
 
 suppressPackageStartupMessages({
@@ -77,6 +79,7 @@ find_col_ci <- function(cols, patterns) {
   NULL
 }
 
+
 ui <- navbarPage(
   title = div(
     style = "font-weight:700; font-size:22px; color:#1A4E8A;",
@@ -116,7 +119,8 @@ ui <- navbarPage(
       sidebarPanel(width = 4,
                    h3("Step 1 · Reading & selection",
                       style = "color:#1A4E8A; font-size:22px; font-weight:700; margin-top:10px;"),
-                   actionButton("info_00", "ℹ"), # Info about input file
+                   actionButton("info_app", "ℹ Read manual", class = "btn-info"),
+                   actionButton("info_00", "ℹ input file format"), # Info about input file
                    fileInput("file", "Upload p-value table (TSV/CSV)", accept = c(".tsv",".txt",".csv")),
                    checkboxInput("header", "First row contains column names", TRUE),
                    radioButtons("sep", "Separator",
@@ -136,10 +140,10 @@ ui <- navbarPage(
                    h3("Step 2 · Fill intervals with mapped SNP's from dbSNP catalog",
                       style = "color:#1A4E8A; font-size:22px; font-weight:700; margin-top:10px;"),
                    helpText("Subsets the dbSNP VCF by intervals and creates a site-level VCF for dbNSFP."),
-                   textInput("bcftools_path", "Path to bcftools (paste path)", value = ""),
+                   textInput("bcftools_path", "Path to bcftools (paste path)", value = "bcftools"),
                    verbatimTextOutput("bcftools_detected"),
                    textInput("sites_vcf", "Path to dbSNP file (.vcf.gz) (paste path)",
-                             value = ""),
+                             value = "/Volumes/LaCie_Drive/ANNOTATE_RS_CODES_Resources/resources_broad_hg38_v0_Homo_sapiens_assembly38.dbsnp138.vcf.gz"),
                    checkboxInput("sites_need_chr", "Force 'chr' prefix in intervals (if the VCF uses 'chr1')", FALSE),
                    checkboxInput("force_vcf40", "Force VCFv4.0 header (legacy compatibility)", TRUE),
                    actionButton(
@@ -153,7 +157,7 @@ ui <- navbarPage(
                    h3("Step 3 · Annotate with dbNSFP",
                       style = "color:#1A4E8A; font-size:22px; font-weight:700; margin-top:10px;"),
                    textInput("dbnsfp_dir",  "Path to dbNSFP folder (contains *.gz and search tool)(paste path)",
-                             value = ""),
+                             value = "/Volumes/LaCie_Drive/dbNSFP5.0a"),
                    textInput("dbnsfp_tool", "Name of search tool (Java class), default: 'search_dbNSFP50a'", value = "search_dbNSFP50a"),
                    numericInput("java_gb",   "Java memory (GB)", value = 6, min = 2, step = 1),
                    checkboxInput("show_dbnsfp_warning", "Show duration warning", TRUE),
@@ -247,13 +251,28 @@ server <- function(input, output, session){
     library(dplyr)
   })
   
+  plotly_message <- function(msg) {
+    plotly::plot_ly() %>%
+      plotly::layout(
+        title = list(
+          text   = paste0("<b>", msg, "</b>"),
+          x      = 0.5,
+          xanchor = "center",
+          font   = list(size = 12)
+        ),
+        xaxis = list(visible = FALSE),
+        yaxis = list(visible = FALSE)
+      )
+  }
+  
+ 
  # info files
   observeEvent(input$info_00, {
     showModal(modalDialog(
       title = "Info: Hits to plot",
       HTML('
 <p style="text-align: justify;">
-  Input file format [(*) needed columns]
+  Input file format [(*) mandatory columns]
 </p>
 
 <table style="border-collapse: collapse; width: 100%;" border="1">
@@ -310,6 +329,43 @@ server <- function(input, output, session){
     ))
   })
 
+  observeEvent(input$info_app, {
+    
+    # Ruta real del fitxer
+    rd <- "www/README.md"
+    
+    validate(need(file.exists(rd),
+                  "README file not found in /www folder"))
+    
+    # Convert MD → HTML
+    library(markdown)
+    html <- markdown::markdownToHTML(rd, fragment.only = TRUE)
+    
+    showModal(modalDialog(
+      title = HTML("<strong>📘 Documentation & User Guide</strong>"),
+      size = "l",
+      easyClose = TRUE,
+      footer = modalButton("Close"),
+      
+      tags$div(
+        style = "height:70vh; overflow-y: auto; padding-right:10px;",
+        HTML(html)
+      )
+    ))
+  })
+  
+  observeEvent(input$info_click, {
+    showModal(modalDialog(
+      title = "Info: UCSC links",
+      p(style = "text-align: justify;",
+        "Fix a window on Manhattan plot and click on selected points to generate a link to UCSC Genome Browser. Fused links are available for a selected point-pair on the same chromosome.
+        P_click (-logPvalue); S_click (score/rankscore value)",
+      ),
+      easyClose = TRUE,
+      footer = NULL
+    ))
+  })
+  
 ############################################################### 
   
   if (requireNamespace("conflicted", quietly = TRUE)) {
@@ -1269,9 +1325,9 @@ server <- function(input, output, session){
       # 2) MANHATTAN & GENES CONTROLS
       # ================================================================
       conditionalPanel(
-        condition = "input.viz_tabs == 'Manhattan & genes'",
+        condition = "input.viz_tabs == 'manhattan_ucsc'",
         
-        h4("Manhattan & genes"),
+        h4("Metrics"),
         
         radioButtons(
           "scoreorrank", "Type",
@@ -1279,8 +1335,7 @@ server <- function(input, output, session){
           selected = "Score",
           inline   = TRUE
         ),
-        
-        h4("Metrics"),
+ 
         uiOutput("ms_metric_picker")
       ),
       
@@ -1463,9 +1518,17 @@ server <- function(input, output, session){
   output$viz_tabs <- renderUI({
     req(dbnsfp_norm_df())
     tagList(
-    #  h3("Visualization"),
-    #  p(em(sprintf("CSV: %s", attr(dbnsfp_norm_df(), "source") %||% "—"))),
       tabsetPanel(id = "viz_tabs",
+                  tabPanel(
+                    title = HTML("<span style='font-size:16px; font-weight:600; color:#1A4E8A;'>📊 Manhattan & UCSC links</span>"),
+                    value = "manhattan_ucsc",
+                    h4("Capture clicks at UCSC Genome Browser"),
+                    actionButton("info_click", "ℹ Links to UCSC"), # Info about input file
+                    uiOutput("ucsc_viewer"),
+                    tags$hr(),
+                    plotlyOutput("manhattan_scores", height = "800px")
+                  ),
+                  
                   tabPanel(title = HTML("<span style='font-size:16px; font-weight:600; color:#1A4E8A;'>🔥 dbNSFP Heatmap</span>"),
                            value = "dbNSFP Heatmap",
                            uiOutput("hm_chr_selector"),
@@ -1492,23 +1555,7 @@ server <- function(input, output, session){
                            ),
                            DT::DTOutput("heatmap_table")
                   ),
-                  tabPanel(
-                    title = HTML("<span style='font-size:16px; font-weight:600; color:#1A4E8A;'>📊 Manhattan & genes</span>"),
-                    value = "Manhattan & genes",
-                    plotlyOutput("manhattan_scores", height = 420),
-                  #  textOutput("rg_pos_txt"),
-                    h4("UCSC Genome Browser"),
-                    selectInput(
-                      "ucsc_mirror", "UCSC mirror",
-                      choices = c(
-                        "Europe (recommended)" = "https://genome-euro.ucsc.edu/cgi-bin/hgTracks",
-                        "USA"                  = "https://genome.ucsc.edu/cgi-bin/hgTracks",
-                        "Asia"                 = "https://genome-asia.ucsc.edu/cgi-bin/hgTracks"
-                      ),
-                      selected = "https://genome-euro.ucsc.edu/cgi-bin/hgTracks"
-                    ),
-                    uiOutput("ucsc_viewer")
-                  ),
+        
                   tabPanel(title = HTML("<span style='font-size:16px; font-weight:600; color:#1A4E8A;'>🧠 GO (BP/CC/MF)</span>"),
                            value = "GO (BP/CC/MF)",
                            plotOutput("go_bar"),
@@ -2106,367 +2153,513 @@ server <- function(input, output, session){
   ########################################################
   # Manhattan and genes (STEP 5.3)
   ########################################################
-  
-  # --- Helper: chromosome lengths hg38 (GRCh38, primary) ---
+  # ============================================================
+  #  Combined Manhattan: P-values (top) + Scores/RankScores (bottom)
+  # ============================================================
+  # HELPERS
   .chr_lengths_hg38 <- function() {
     lens <- c(
       `1`=248956422, `2`=242193529, `3`=198295559, `4`=190214555, `5`=181538259,
       `6`=170805979, `7`=159345973, `8`=145138636, `9`=138394717, `10`=133797422,
       `11`=135086622, `12`=133275309, `13`=114364328, `14`=107043718, `15`=101991189,
-      `16`=90338345,  `17`=83257441,  `18`=80373285,  `19`=58617616,  `20`=64444167,
-      `21`=46709983,  `22`=50818468,  `X`=156040895,  `Y`=57227415,  `MT`=16569
+      `16`=90338345, `17`=83257441, `18`=80373285, `19`=58617616, `20`=64444167,
+      `21`=46709983, `22`=50818468, `X`=156040895, `Y`=57227415, `MT`=16569
     )
-    ord <- c(as.character(1:22), "X", "Y", "MT")
-    df <- data.frame(
-      chr = factor(names(lens), levels = ord),
-      len = as.numeric(lens),
-      stringsAsFactors = FALSE
-    )
+    ord <- c(as.character(1:22),"X","Y","MT")
+    df <- data.frame(chr=factor(names(lens),levels=ord),len=as.numeric(lens))
     df$chr_cum <- cumsum(df$len) - df$len
     df$center  <- df$chr_cum + df$len/2
     df
   }
-  
   .ref_hg38 <- .chr_lengths_hg38()
   
-  # --- Manhattan of multiple metrics; X axis ALWAYS spans 1–22, X, Y, MT ---
-  output$manhattan_scores <- renderPlotly({
-    req(dbnsfp_norm_df())
-    df <- dbnsfp_norm_df()
+  # Helper: BPcum -> chr,pos
+  .man_bp_cum_to_coord <- function(bp_cum) {
+    ref <- .ref_hg38
+    idx <- max(which(ref$chr_cum <= bp_cum))
+    if (length(idx) == 0 || !is.finite(idx)) return(NULL)
+    chr <- as.character(ref$chr[idx])
+    pos <- round(bp_cum - ref$chr_cum[idx])
+    list(chr = chr, pos = pos)
+  }
+  
+  output$manhattan_scores <- plotly::renderPlotly({
     
-    chr_col <- session$userData$chr_col %||% "chr"
-    bp_col  <- session$userData$bp_col  %||% "BP"
-    snp_col <- session$userData$snp_col %||% "SNP"
+    dfp <- tryCatch(gwas_df(), error = function(e) NULL)
+    dfs <- tryCatch(dbnsfp_norm_df(), error = function(e) NULL)
     
-    validate(need(all(c(chr_col, bp_col) %in% names(df)),
-                  "Missing chr/BP columns."))
+    # --------- 1) Comprovar GWAS ---------
+    gwas_ok <- !is.null(dfp) &&
+      is.data.frame(dfp) &&
+      nrow(dfp) > 0 &&
+      all(c("CHR", "BP", "logp") %in% names(dfp))
     
-    # ===================================================
-    # 1) Select: Score / Rankscore 
-    # ===================================================
-    # 1) Score vs Rankscore
-    user_type <- input$scoreorrank %||% "Score"
-    
-    if (user_type == "Score") {
-      metric_cols <- grep("_score$", names(df), value = TRUE)
-    } else {
-      metric_cols <- grep("_rankscore$", names(df), value = TRUE)
+    if (!gwas_ok) {
+      return(
+        plotly_message(
+          "⚠️ Step 1 (GWAS table) is missing or incomplete.\n\nPlease load CHR, BP and P in STEP 1."
+        )
+      )
     }
     
-    metric_cols <- metric_cols[colSums(!is.na(df[metric_cols])) > 0]
-    
-    validate(need(length(metric_cols) > 0,
-                  paste("No", user_type, "columns found with valid values.")))
-    
-    # 2) Aplicar selecció del picker
-    selected <- input$ms_metrics
-    
-    # 👉 Si l’usuari no selecciona res, usar només la primera
-    if (is.null(selected) || !length(selected)) {
-      selected <- metric_cols[1]
+    # --------- 2) Comprovar dbNSFP ---------
+    dbnsfp_ok <- !is.null(dfs) && is.data.frame(dfs) && nrow(dfs) > 0
+    if (!dbnsfp_ok) {
+      return(
+        plotly_message(
+          "⚠️ dbNSFP results not available.\n\nRun STEP 2 before using this panel."
+        )
+      )
     }
     
-    metric_cols <- intersect(metric_cols, selected)
-    
-    validate(need(length(metric_cols) > 0,
-                  paste("Selected", user_type, "metrics contain no valid values.")))
-    
-    # ===================================================
-    # 2) Applay selection at checkboxGroupInput
-    # ===================================================
-    
-    selected <- input$ms_metrics
-    
-    # Si no hi ha cap selecció → agafar la PRIMERA mètrica disponible
-    if (is.null(selected) || length(selected) == 0) {
-      selected <- metric_cols[1]     # <<--- CLAR, SIMPLE i FIABLE
-    }
-    
-    metric_cols <- intersect(metric_cols, selected)
-    validate(need(length(metric_cols) > 0,
-                  "No valid metrics selected for plotting."))
-    # ===================================================
-    # 3) Chromosome normalization
-    # ===================================================
+    # --------- 3) Normalització cromosomes ---------
     norm_chr <- function(x) {
       x <- gsub("^chr", "", as.character(x), ignore.case = TRUE)
-      x[x=="23"] <- "X"
-      x[x=="24"] <- "Y"
-      x[x %in% c("M","MT","m","mT","mtdna","MTDNA")] <- "MT"
+      x[x == "23"] <- "X"
+      x[x == "24"] <- "Y"
+      x[x %in% c("M","MT","m","mt","mtdna","MTDNA")] <- "MT"
       toupper(x)
     }
     
     ref <- .ref_hg38
     
-    # ===================================================
-    # 4) Long format
-    # ===================================================
-    dfl <- df |>
-      dplyr::select(dplyr::all_of(c(chr_col, bp_col, snp_col, metric_cols))) |>
-      tidyr::pivot_longer(
-        cols = dplyr::all_of(metric_cols),
-        names_to = "metric", values_to = "value"
-      ) |>
-      dplyr::mutate(
-        chrN = norm_chr(.data[[chr_col]]),
-        BP   = suppressWarnings(as.numeric(.data[[bp_col]]))
-      ) |>
-      dplyr::filter(!is.na(BP), !is.na(value))
+    # ============================================================
+    #   4) MANHATTAN TOP (GWAS P)
+    # ============================================================
+    dfp$chrN <- norm_chr(dfp$CHR)
     
-    validate(need(nrow(dfl) > 0,
-                  "No valid data for Manhattan plot."))
-    
-    # ===================================================
-    # 5) Cummulative position
-    # ===================================================
-    dfl <- dfl |>
-      dplyr::mutate(chrN = factor(chrN, levels = levels(ref$chr))) |>
+    dfp <- dfp |>
       dplyr::inner_join(ref |> dplyr::select(chr, chr_cum),
                         by = c("chrN" = "chr")) |>
       dplyr::mutate(BPcum = BP + chr_cum)
     
-    validate(need(!any(is.na(dfl$BPcum)),
-                  "Invalid cumulative BP positions."))
-    
-    # ===================================================
-    # ===================================================
-    axis_df <- dfl |>
+    axis_df <- dfp |>
       dplyr::group_by(chrN) |>
-      dplyr::summarise(
-        center = mean(BPcum, na.rm = TRUE),
-        .groups = "drop"
-      ) |>
-      dplyr::filter(!is.na(center)) |>
-      dplyr::arrange(center)
+      dplyr::summarise(center = mean(BPcum, na.rm = TRUE), .groups = "drop")
     
     axis_breaks <- axis_df$center
     axis_labels <- paste0("chr", axis_df$chrN)
     
-    validate(need(length(axis_breaks) == length(axis_labels),
-                  "Internal X-axis mismatch."))
+    has_p    <- "Pval" %in% names(dfp)
+    has_snp  <- "snp" %in% names(dfp) || "SNP" %in% names(dfp)
+    snp_col0 <- if ("snp" %in% names(dfp)) "snp" else if ("SNP" %in% names(dfp)) "SNP" else NULL
     
-    # ===================================================
-    # 7) Plot Manhattan
-    # ===================================================
-    levs <- sort(unique(dfl$metric))
-    pal  <- viridisLite::viridis(length(levs))
-    
-    p <- ggplot(dfl, aes(
-      x = BPcum, y = value, color = metric,
-      text = paste0(
-        "SNP: ", .data[[snp_col]],
-        "<br>Chr: ", chrN,
-        "<br>Pos: ", BP,
-        "<br>", metric, ": ", signif(value, 3)
+    dfp <- dfp |>
+      dplyr::mutate(
+        tooltip = paste0(
+          "CHR: ", CHR,
+          "<br>BP: ", BP,
+          if (has_p) paste0("<br>P: ", signif(.data[["Pval"]], 3)) else "",
+          if (!is.null(snp_col0)) paste0("<br>SNP: ", .data[[snp_col0]]) else ""
+        )
       )
-    )) +
-      geom_point(alpha = 0.6, size = 1.5) +
-      scale_color_manual(values = stats::setNames(pal, levs)) +
-      scale_x_continuous(
-        breaks = axis_breaks,
-        labels = axis_labels,
-        expand = c(0.01, 0.01)
-      ) +
-      labs(
-        x = "Genome (1–22, X, Y, MT)",
-        y = user_type,
-        title = paste("dbNSFP — Manhattan (", user_type, ")", sep = "")
-      ) +
-      theme_minimal(base_size = 13) +
-      theme(legend.position = "right") +
-      theme(
-        legend.position = "right",
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
     
-    p_pl <- plotly::ggplotly(p, tooltip = "text", source = "ms")
-    plotly::event_register(p_pl, "plotly_click")
-    p_pl
-  })
-  
-  output$ms_metric_picker <- renderUI({
-    req(dbnsfp_norm_df())
-    df <- dbnsfp_norm_df()
+    p1 <- ggplot2::ggplot(
+      dfp,
+      ggplot2::aes(x = BPcum, y = logp, text = tooltip)
+    ) +
+      ggplot2::geom_point(ggplot2::aes(color = factor(CHR %% 2)), size = 1) +
+      ggplot2::scale_x_continuous(breaks = axis_breaks, labels = axis_labels) +
+      ggplot2::scale_color_manual(values = c("#377eb8", "#ff7f00")) +
+      ggplot2::theme_minimal(base_size = 12) +
+      ggplot2::labs(y = "-log10(P)", x = NULL) +
+      ggplot2::theme(
+        axis.text.x   = ggplot2::element_blank(),
+        axis.ticks.x  = ggplot2::element_blank(),
+        legend.position = "none"
+      )
+    
+    p1_pl <- plotly::ggplotly(p1, tooltip="text")
+    
+    # ============================================================
+    #   5) MANHATTAN BOTTOM (dbNSFP Scores)
+    # ============================================================
+    chr_col <- session$userData$chr_col %||% "chr"
+    bp_col  <- session$userData$bp_col  %||% "BP"
+    snp_col <- session$userData$snp_col %||% "SNP"
     
     type <- input$scoreorrank %||% "Score"
     
-    # 1) Llista de mètriques segons Tipus
-    all_metrics <- if (type == "Score") {
-      grep("_score$", names(df), value = TRUE)
+    if (type == "Score") {
+      metrics <- grep("_score$", names(dfs), value = TRUE)
     } else {
-      grep("_rankscore$", names(df), value = TRUE)
+      metrics <- grep("_rankscore$", names(dfs), value = TRUE)
     }
     
-    # Només columnes numèriques amb algun valor
-    all_metrics <- all_metrics[vapply(df[all_metrics], is.numeric, logical(1))]
-    all_metrics <- all_metrics[colSums(!is.na(df[all_metrics])) > 0]
+    metrics <- metrics[colSums(!is.na(dfs[metrics])) > 0]
+    validate(need(length(metrics) > 0, "No metrics found."))
     
-    if (!length(all_metrics)) return(NULL)
+    selected <- input$ms_metrics
+    if (is.null(selected) || length(selected) == 0) selected <- metrics[1]
+    metric_cols <- intersect(metrics, selected)
+    validate(need(length(metric_cols) > 0, "No valid metrics selected."))
     
-    # 2) Mapes de classes per SCORE i per RANKSCORE
-    class_map_score <- list(
-      "Default" = c(
-        "SIFT_score","SIFT4G_score",
-        "Polyphen2_HDIV_score","Polyphen2_HVAR_score",
-        "MutationTaster_score","MutationAssessor_score",
-        "PROVEAN_score","REVEL_score"
-      ),
-      "Pathogenicity" = c(
-        "VEST4_score","MetaSVM_score","MetaLR_score","MetaRNN_score",
-        "M_CAP_score","MutPred_score","MVP_score","gMVP_score","MPC_score",
-        "PrimateAI_score","DEOGEN2_score","BayesDel_addAF_score",
-        "BayesDel_noAF_score","ClinPred_score","LIST_S2_score",
-        "VARITY_R_score","VARITY_ER_score","ESM1b_score",
-        "AlphaMissense_score","PHACTboost_score","MutFormer_score",
-        "MutScore_score"
-      ),
-      "Functional impact" = c("CADD_raw","CADD_phred","DANN_score"),
-      "LoF / Haploinsufficiency" = c(
-        "HIPred_score","ExAC_del_score","ExAC_dup_score",
-        "ExAC_cnv_score","LoFtool_score"
-      ),
-      "Gene damage" = c(
-        "GDI","GDI_Phred","Gene_indispensability_score"
+    dfs$chrN <- norm_chr(dfs[[chr_col]])
+    dfs$BP   <- suppressWarnings(as.numeric(dfs[[bp_col]]))
+    
+    dfl <- dfs |>
+      dplyr::select(chrN, BP, dplyr::all_of(metric_cols), dplyr::all_of(snp_col)) |>
+      tidyr::pivot_longer(
+        cols      = dplyr::all_of(metric_cols),
+        names_to  = "metric",
+        values_to = "value"
+      ) |>
+      dplyr::filter(!is.na(BP), !is.na(value)) |>
+      dplyr::inner_join(ref |> dplyr::select(chr, chr_cum),
+                        by = c("chrN" = "chr")) |>
+      dplyr::mutate(
+        BPcum = BP + chr_cum,
+        tooltip = paste0(
+          "SNP: ", .data[[snp_col]],
+          "<br>Chr: ", chrN,
+          "<br>Pos: ", BP,
+          "<br>", metric, ": ", signif(value, 3)
+        )
+      )
+    
+    levs <- sort(unique(dfl$metric))
+    pal  <- viridisLite::viridis(length(levs))
+    
+    p2 <- ggplot2::ggplot(
+      dfl,
+      ggplot2::aes(x = BPcum, y = value, color = metric, text = tooltip)
+    ) +
+      ggplot2::geom_point(alpha = 0.7, size = 1.2) +
+      ggplot2::scale_x_continuous(breaks = axis_breaks, labels = axis_labels) +
+      ggplot2::scale_color_manual(values = pal) +
+      ggplot2::theme_minimal(base_size = 12) +
+      ggplot2::labs(y = type, x = "Genome (1–22, X, Y, MT)") +
+      ggplot2::theme(
+        axis.text.x = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.position = "right"
+      )
+    
+    p2_pl <- plotly::ggplotly(p2, tooltip="text")
+    
+    # ============================================================
+    #   6) STACKED PLOT
+    # ============================================================
+    sp <- plotly::subplot(
+      p1_pl,
+      p2_pl,
+      nrows  = 2,
+      shareX = TRUE,
+      titleX = TRUE,
+      titleY = TRUE,
+      heights = c(0.52, 0.48)
+    )
+    
+    sp <- sp %>% plotly::layout(
+      margin = list(t = 80),
+      annotations = list(
+        list(
+          x = 0.5, y = 1.1,
+          text = "<b>Manhattan plot — 📈 GWAS P-values</b>",
+          showarrow = FALSE,
+          xref = "paper", yref = "paper",
+          font = list(size = 16)
+        ),
+        list(
+          x = 0.5, y = 0.50,
+          text = "<b>Manhattan plot — 🧬 Neighboring NonSyn SNPs</b>",
+          showarrow = FALSE,
+          xref = "paper", yref = "paper",
+          font = list(size = 16)
+        )
       )
     )
     
-    class_map_rank <- list(
-      "Default" = c(
-        "SIFT_converted_rankscore","SIFT4G_converted_rankscore",
-        "Polyphen2_HDIV_rankscore","Polyphen2_HVAR_rankscore",
-        "MutationAssessor_rankscore","PROVEAN_converted_rankscore",
-        "REVEL_rankscore","GERP_91_mammals_rankscore",
-        "phyloP17way_primate_rankscore","phastCons17way_primate_rankscore"
-      ),
-      "Pathogenicity" = c(
-        "VEST4_rankscore","MetaSVM_rankscore","MetaLR_rankscore",
-        "MetaRNN_rankscore","M_CAP_rankscore","MutPred_rankscore",
-        "MVP_rankscore","gMVP_rankscore","MPC_rankscore",
-        "PrimateAI_rankscore","DEOGEN2_rankscore",
-        "BayesDel_addAF_rankscore","BayesDel_noAF_rankscore",
-        "ClinPred_rankscore","LIST_S2_rankscore",
-        "VARITY_R_rankscore","VARITY_ER_rankscore",
-        "ESM1b_rankscore","AlphaMissense_rankscore",
-        "PHACTboost_rankscore","MutFormer_rankscore",
-        "MutScore_rankscore"
-      ),
-      "Functional impact" = c("CADD_raw_rankscore","DANN_rankscore"),
-      "LoF / Haploinsufficiency" = c(
-        "HIPred_score",           # HIPred no té "_rankscore" en dbNSFP
-        "ExAC_del_score","ExAC_dup_score","ExAC_cnv_score"
-      ),
-      "Gene damage" = c(
-        "GDI_Phred"               # l’índex “rank” ja està implícit
+    # Índex de traces del top i bottom dins el widget combinat
+    n_top    <- length(p1_pl$x$data)
+    n_bottom <- length(p2_pl$x$data)
+    
+    session$userData$ms_top_traces    <- seq_len(n_top)
+    session$userData$ms_bottom_traces <- n_top + seq_len(n_bottom)
+    
+    session$userData$manhattan_combined <- sp
+    sp
+  })
+  
+
+  
+  ############################################################
+  # CLICK HANDLING + UCSC LINKS (Individual + Fusionat)
+  ############################################################
+  
+  # Guardem clics INDIVIDUALS de P i Score
+  session$userData$clickedP <- reactiveValues(chr=NULL, bp=NULL)
+  session$userData$clickedS <- reactiveValues(chr=NULL, bp=NULL)
+  
+  # Un únic observer per a tots els clics del subplot
+  observeEvent(plotly::event_data("plotly_click"), {
+    
+    ed <- plotly::event_data("plotly_click")
+    req(ed, !is.null(ed$x), !is.null(ed$curveNumber))
+    
+    top_idx    <- isolate(session$userData$ms_top_traces)
+    bottom_idx <- isolate(session$userData$ms_bottom_traces)
+    req(!is.null(top_idx), !is.null(bottom_idx))
+    
+    idx <- ed$curveNumber + 1
+    coord <- .man_bp_cum_to_coord(as.numeric(ed$x))
+    req(coord)
+    
+    if (idx %in% top_idx) {
+      session$userData$clickedP$chr <- coord$chr
+      session$userData$clickedP$bp  <- coord$pos
+      cat(">>> CLICK P DETECTED\n")
+    } else if (idx %in% bottom_idx) {
+      session$userData$clickedS$chr <- coord$chr
+      session$userData$clickedS$bp  <- coord$pos
+      cat(">>> CLICK SCORE DETECTED\n")
+    }
+  })
+  
+
+  output$ucsc_viewerXXX <- renderUI({
+    
+    # Helpers per layout horitzontal
+    row_div <- function(...) {
+      tags$div(style="white-space:nowrap; overflow-x:auto;", ...)
+    }
+    block_div <- function(...) {
+      tags$div(
+        style="display:inline-block; vertical-align:top; margin-right:25px;",
+        ...
       )
-    )
-    
-    class_map <- if (type == "Score") class_map_score else class_map_rank
-    
-    # 3) Construir choices agrupats
-    choices_list <- list()
-    used <- character(0)
-    
-    for (grp in names(class_map)) {
-      present <- intersect(class_map[[grp]], all_metrics)
-      if (length(present)) {
-        choices_list[[grp]] <- stats::setNames(present, present)
-        used <- c(used, present)
-      }
     }
     
-    remaining <- setdiff(all_metrics, used)
-    if (length(remaining)) {
-      choices_list[["Other"]] <- stats::setNames(remaining, remaining)
-    }
+    chrP <- session$userData$clickedP$chr
+    bpP  <- session$userData$clickedP$bp
+    chrS <- session$userData$clickedS$chr
+    bpS  <- session$userData$clickedS$bp
     
-    # 4) Per defecte: primera mètrica de la llista
-    default_metric <- if (length(all_metrics)) all_metrics[1] else NULL
+    wkb  <- as.integer(input$rg_window %||% 250)
+    base <- input$ucsc_mirror %||% "https://genome-euro.ucsc.edu/cgi-bin/hgTracks"
     
-    selectizeInput(
-      "ms_metrics",
-      "Select metrics to plot",
-      choices  = choices_list,
-      selected = default_metric,
-      multiple = TRUE,
-      options  = list(plugins = list("remove_button"))
-    )
-  })
-  
-  
-  # --- click on the Manhattan ---
-  ms_click <- reactiveVal(NULL)
-  
-  observeEvent(plotly::event_data("plotly_click", source = "ms"), {
-    ed <- plotly::event_data("plotly_click", source = "ms")
-    if (is.null(ed) || is.null(ed$x)) return()
-    bp_cum <- as.numeric(ed$x)
+    blocks <- list()
     
-    ref <- .ref_hg38
-    idx <- max(which(ref$chr_cum <= bp_cum))
-    if (length(idx) == 0 || !is.finite(idx)) return()
-    
-    chr <- as.character(ref$chr[idx])
-    pos <- round(bp_cum - ref$chr_cum[idx])
-    
-    # store the “raw” region; refine it later with the window
-    ms_click(list(chr = chr, pos = pos))
-  }, ignoreInit = TRUE)
-  
-  # if you change the window and there is no click yet, set a default one
-  observeEvent(input$rg_window, ignoreInit = FALSE, {
-    if (is.null(ms_click())) {
-      ms_click(list(chr = "1", pos = floor(.ref_hg38$len[.ref_hg38$chr == "1"]/2)))
-    }
-  })
-  
-#  output$rg_pos_txt <- renderText({
-#    p <- ms_click(); wkb <- as.integer(input$rg_window %||% 250)
-#    if (is.null(p)) "Click on the Manhattan plot to center the region."
-#    else sprintf("Center: chr%s:%s  |  Window: ±%d kb",
-#                 p$chr, format(p$pos, big.mark = ","), wkb)
-#  })
-  
-  
-  # UCSC viewer as clickable link
-  output$ucsc_viewer <- renderUI({
-    p <- ms_click()
-    wkb <- as.integer(input$rg_window %||% 250)
-    
-    if (is.null(p)) {
-      return(div(class = "text-muted",
-                 "🔎 Click on the Manhattan plot to generate the UCSC (hg38) link."))
-    }
-    
-    chr  <- p$chr
-    pos  <- p$pos
-    start <- max(1L, pos - wkb * 1000L)
-    end   <- pos + wkb * 1000L
-    
-    # European mirror (usually most stable)
-    base_url <- "https://genome-euro.ucsc.edu/cgi-bin/hgTracks"
-    
-    # 🔥  highlight = chr:start-end (vertical line)
-    ucsc_url <- sprintf(
-      "%s?db=hg38&position=chr%s:%d-%d&highlight=hg38.chr%s:%d-%d",
-      base_url, chr, start, end, chr, pos, pos
-    )
-    
-    tags$div(
-      tags$p("📍 Selected region: ",
-             tags$b(sprintf("chr%s:%d-%d", chr, start, end))),
+    # ----- P CLICK -----
+    if (!is.null(chrP)) {
       
-      tags$small("Open this region in UCSC: "),
-      tags$a(
-        href   = ucsc_url,
-        target = "_blank",
-        class  = "btn btn-primary btn-sm",
-        " UCSC"
-      ),
-      tags$br(), tags$br(),
-      tags$code(ucsc_url)
+      startP <- max(1, bpP - wkb*1000)
+      endP   <- bpP + wkb*1000
+      
+      urlP <- sprintf(
+        "%s?db=hg38&position=chr%s:%d-%d&highlight=hg38.chr%s:%d-%d",
+        base, chrP, startP, endP, chrP, bpP, bpP
+      )
+      
+      blocks <- c(blocks, list(
+        block_div(
+          tags$p("📍 P-value:", tags$b(sprintf("chr%s:%d", chrP, bpP))),
+          tags$a(href=urlP, target="_blank",
+                 class="btn btn-danger btn-sm",
+                 "Open P click")
+        )
+      ))
+    }
+    
+    # ----- SCORE CLICK -----
+    if (!is.null(chrS)) {
+      
+      startS <- max(1, bpS - wkb*1000)
+      endS   <- bpS + wkb*1000
+      
+      urlS <- sprintf(
+        "%s?db=hg38&position=chr%s:%d-%d&highlight=hg38.chr%s:%d-%d",
+        base, chrS, startS, endS, chrS, bpS, bpS
+      )
+      
+      blocks <- c(blocks, list(
+        block_div(
+          tags$p("📍 Score:", tags$b(sprintf("chr%s:%d", chrS, bpS))),
+          tags$a(href=urlS, target="_blank",
+                 class="btn btn-primary btn-sm",
+                 "Open Score click")
+        )
+      ))
+    }
+    
+    # Si falta algun → no hi ha fusió
+    if (is.null(chrP) || is.null(chrS))
+      return(row_div(blocks))
+    
+    # Cromosomes diferents
+    if (chrP != chrS) {
+      blocks <- c(blocks, list(
+        block_div(
+          HTML("<b>⚠ Cannot merge — different chromosomes.</b>")
+        )
+      ))
+      return(row_div(blocks))
+    }
+    
+    # ----- FUSIÓ -----
+    chrF <- chrP
+    startF <- max(1, min(bpP,bpS) - wkb*1000)
+    endF   <- max(bpP,bpS) + wkb*1000
+    
+    bed <- paste0(
+      "track type=bed name=Clicks description=\"P(red) and Score(blue)\" visibility=2 itemRgb=On\n",
+      sprintf("chr%s\t%d\t%d\tP_click\t0\t+\t%d\t%d\t255,0,0\n",
+              chrP, bpP, bpP+1, bpP, bpP+1),
+      sprintf("chr%s\t%d\t%d\tS_click\t0\t+\t%d\t%d\t0,0,255\n",
+              chrS, bpS, bpS+1, bpS, bpS+1)
     )
+    
+    bed_url <- URLencode(bed, reserved=TRUE)
+    
+    url_fused <- sprintf(
+      "%s?db=hg38&position=chr%s:%d-%d&hgt.customText=%s",
+      base, chrF, startF, endF, bed_url
+    )
+    
+    blocks <- c(blocks, list(
+      block_div(
+        tags$p("🧬 Fusion:", tags$b(sprintf("chr%s:%d-%d", chrF, startF, endF))),
+        tags$a(href=url_fused, target="_blank",
+               class="btn btn-success btn-sm",
+               "Open fused")
+      )
+    ))
+    
+    # FINAL: tots els blocs en una sola línia
+    row_div(blocks)
+  })
+  
+  output$ucsc_viewer <- renderUI({
+    
+    # Helpers per layout horitzontal
+    row_div <- function(...) {
+      tags$div(style="white-space:nowrap; overflow-x:auto;", ...)
+    }
+    block_div <- function(...) {
+      tags$div(
+        style="display:inline-block; vertical-align:top; margin-right:25px;",
+        ...
+      )
+    }
+    
+    chrP <- session$userData$clickedP$chr
+    bpP  <- session$userData$clickedP$bp
+    chrS <- session$userData$clickedS$chr
+    bpS  <- session$userData$clickedS$bp
+    
+    wkb  <- as.integer(input$rg_window %||% 250)
+    base <- input$ucsc_mirror %||% "https://genome-euro.ucsc.edu/cgi-bin/hgTracks"
+    
+    
+    # Include recombination track 1000G Phase 3 (hg38)
+    recomb_track <- paste0(
+      "track type=bigWig name=\"Recomb_1000G\" ",
+      "description=\"1000 Genomes Phase 3 recombination rate (cM/Mb, hg38, PR Loh)\" ",
+      "visibility=dense ",
+      "bigDataUrl=https://hgdownload.soe.ucsc.edu/gbdb/hg38/recombRate/recomb1000GAvg.bw\n"
+    )
+    
+    recomb_url <- URLencode(recomb_track, reserved = TRUE)
+    
+    blocks <- list()
+    
+    # ----- P CLICK -----
+    if (!is.null(chrP)) {
+      
+      startP <- max(1, bpP - wkb*1000)
+      endP   <- bpP + wkb*1000
+      
+      urlP <- sprintf(
+        "%s?db=hg38&position=chr%s:%d-%d&highlight=hg38.chr%s:%d-%d&recRate=dense",
+        base, chrP, startP, endP, chrP, bpP, bpP, recomb_url
+      )
+      
+      
+      blocks <- c(blocks, list(
+        block_div(
+          tags$p("📍 P-value:", tags$b(sprintf("chr%s:%d", chrP, bpP))),
+          tags$a(href=urlP, target="_blank",
+                 class="btn btn-danger btn-sm",
+                 "Open P click")
+        )
+      ))
+    }
+    
+    # ----- SCORE CLICK -----
+    if (!is.null(chrS)) {
+      
+      startS <- max(1, bpS - wkb*1000)
+      endS   <- bpS + wkb*1000
+      
+      urlS <- sprintf(
+        "%s?db=hg38&position=chr%s:%d-%d&highlight=hg38.chr%s:%d-%d&recRate=dense",
+        base, chrS, startS, endS, chrS, bpS, bpS, recomb_url
+      )
+      
+      blocks <- c(blocks, list(
+        block_div(
+          tags$p("📍 Score:", tags$b(sprintf("chr%s:%d", chrS, bpS))),
+          tags$a(href=urlS, target="_blank",
+                 class="btn btn-primary btn-sm",
+                 "Open Score click")
+        )
+      ))
+    }
+    
+    # No fusion if
+    if (is.null(chrP) || is.null(chrS))
+      return(row_div(blocks))
+    
+    # If chromosomes are different
+    if (chrP != chrS) {
+      blocks <- c(blocks, list(
+        block_div(
+          HTML("<b>⚠ Cannot merge — different chromosomes.</b>")
+        )
+      ))
+      return(row_div(blocks))
+    }
+    
+    # ----- FUSED -----
+    chrF <- chrP
+    startF <- max(1, min(bpP,bpS) - wkb*1000)
+    endF   <- max(bpP,bpS) + wkb*1000
+    
+    custom_tracks <- paste0(
+      # Format BED file with two clicks
+      "track type=bed name=Clicks description=\"P(red) and Score(blue)\" visibility=2 itemRgb=On\n",
+      sprintf("chr%s\t%d\t%d\tP_click\t0\t+\t%d\t%d\t255,0,0\n",
+              chrP, bpP, bpP+1, bpP, bpP+1),
+      sprintf("chr%s\t%d\t%d\tS_click\t0\t+\t%d\t%d\t0,0,255\n",
+              chrS, bpS, bpS+1, bpS, bpS+1),
+      # add bigWig track recombination 1000G
+      "track type=bigWig name=\"Recomb_1000G\" ",
+      "description=\"1000 Genomes Phase 3 recombination rate (cM/Mb, hg38, PR Loh)\" ",
+      "visibility=dense ",
+      "bigDataUrl=https://hgdownload.soe.ucsc.edu/gbdb/hg38/recombRate/recomb1000GAvg.bw\n"
+    )
+    
+    bed_url <- URLencode(custom_tracks, reserved = TRUE)
+    
+    url_fused <- sprintf(
+      "%s?db=hg38&position=chr%s:%d-%d&hgt.customText=%s",
+      base, chrF, startF, endF, bed_url
+    )
+    
+    blocks <- c(blocks, list(
+      block_div(
+        tags$p("🧬 Fusion:", tags$b(sprintf("chr%s:%d-%d", chrF, startF, endF))),
+        tags$a(href=url_fused, target="_blank",
+               class="btn btn-success btn-sm",
+               "Open fused")
+      )
+    ))
+    
+    row_div(blocks)
   })
   
   
+  ##############################
+  ##############################
   # ==========================
   #  GO Enrichment (Step 5.4)
   # ==========================
@@ -2800,6 +2993,121 @@ server <- function(input, output, session){
       DT::formatSignif(c("p-value", "FDR", "qvalue"), digits = 3)
   })
 
+  ###########################################################
+   output$ms_metric_picker <- renderUI({
+    req(dbnsfp_norm_df())
+    df <- dbnsfp_norm_df()
+    
+    type <- input$scoreorrank %||% "Score"
+    
+    # ----------------------------
+    # 1) Metrics according to type
+    # ----------------------------
+    if (type == "Score") {
+      all_metrics <- grep("_score$", names(df), value = TRUE)
+    } else {
+      all_metrics <- grep("_rankscore$", names(df), value = TRUE)
+    }
+    
+    # Only numeric and with at least one non-NA value
+    all_metrics <- all_metrics[vapply(df[all_metrics], is.numeric, logical(1))]
+    all_metrics <- all_metrics[colSums(!is.na(df[all_metrics])) > 0]
+    
+    if (!length(all_metrics)) return(NULL)
+    
+    # ----------------------------
+    # 2) Category definitions
+    # ----------------------------
+    class_map_score <- list(
+      "Default" = c(
+        "SIFT_score","SIFT4G_score",
+        "Polyphen2_HDIV_score","Polyphen2_HVAR_score",
+        "MutationTaster_score","MutationAssessor_score",
+        "PROVEAN_score","REVEL_score"
+      ),
+      "Pathogenicity" = c(
+        "VEST4_score","MetaSVM_score","MetaLR_score","MetaRNN_score",
+        "M_CAP_score","MutPred_score","MVP_score","gMVP_score","MPC_score",
+        "PrimateAI_score","DEOGEN2_score","BayesDel_addAF_score",
+        "BayesDel_noAF_score","ClinPred_score","LIST_S2_score",
+        "VARITY_R_score","VARITY_ER_score","ESM1b_score",
+        "AlphaMissense_score","PHACTboost_score","MutFormer_score",
+        "MutScore_score"
+      ),
+      "Functional impact" = c("CADD_raw","CADD_phred","DANN_score"),
+      "LoF / Haploinsufficiency" = c(
+        "HIPred_score","ExAC_del_score","ExAC_dup_score",
+        "ExAC_cnv_score","LoFtool_score"
+      ),
+      "Gene damage" = c(
+        "GDI","GDI_Phred","Gene_indispensability_score"
+      )
+    )
+    
+    class_map_rank <- list(
+      "Default" = c(
+        "SIFT_converted_rankscore","SIFT4G_converted_rankscore",
+        "Polyphen2_HDIV_rankscore","Polyphen2_HVAR_rankscore",
+        "MutationAssessor_rankscore","PROVEAN_converted_rankscore",
+        "REVEL_rankscore","GERP_91_mammals_rankscore",
+        "phyloP17way_primate_rankscore","phastCons17way_primate_rankscore"
+      ),
+      "Pathogenicity" = c(
+        "VEST4_rankscore","MetaSVM_rankscore","MetaLR_rankscore",
+        "MetaRNN_rankscore","M_CAP_rankscore","MutPred_rankscore",
+        "MVP_rankscore","gMVP_rankscore","MPC_rankscore",
+        "PrimateAI_rankscore","DEOGEN2_rankscore",
+        "BayesDel_addAF_rankscore","BayesDel_noAF_rankscore",
+        "ClinPred_rankscore","LIST_S2_rankscore",
+        "VARITY_R_rankscore","VARITY_ER_rankscore",
+        "ESM1b_rankscore","AlphaMissense_rankscore",
+        "PHACTboost_rankscore","MutFormer_rankscore",
+        "MutScore_rankscore"
+      ),
+      "Functional impact" = c("CADD_raw_rankscore","DANN_rankscore"),
+      "LoF / Haploinsufficiency" = c(
+        "HIPred_score",  # no té rankscore propi
+        "ExAC_del_score","ExAC_dup_score","ExAC_cnv_score"
+      ),
+      "Gene damage" = c("GDI_Phred")
+    )
+    
+    class_map <- if (type == "Score") class_map_score else class_map_rank
+    
+    # ----------------------------
+    # 3) Build grouped choices
+    # ----------------------------
+    choices_list <- list()
+    used <- character(0)
+    
+    for (grp in names(class_map)) {
+      present <- intersect(class_map[[grp]], all_metrics)
+      if (length(present)) {
+        choices_list[[grp]] <- present
+        used <- c(used, present)
+      }
+    }
+    
+    # remaining metrics
+    remaining <- setdiff(all_metrics, used)
+    if (length(remaining)) {
+      choices_list[["Other"]] <- remaining
+    }
+    
+    # Default selection = first metric
+    default_metric <- all_metrics[1]
+    
+    selectizeInput(
+      "ms_metrics",
+      "Select metrics to plot",
+      choices  = choices_list,
+      selected = default_metric,
+      multiple = TRUE,
+      options  = list(plugins = list("remove_button"))
+    )
+  })
+
+  
 }
 
 shinyApp(ui, server)
